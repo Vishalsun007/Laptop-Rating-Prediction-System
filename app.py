@@ -1,11 +1,7 @@
 import streamlit as st
-import joblib
-import pandas as pd
+import main
 
-# Load the linear regression model
-model = joblib.load("linear_regression_model.joblib")
-
-# Define the dropdown parameters
+# Define parameters
 parameters = {
     "brand": ['acer', 'apple', 'asus', 'avita', 'axl', 'chuwi', 'dell', 'fujitsu', 'gigabyte', 'hp',
               'honor', 'iball', 'infinix', 'jio', 'lenovo', 'lg', 'microsoft', 'msi', 'primebook', 'realme',
@@ -33,11 +29,6 @@ parameters = {
     "year_of_warranty": [1, 2, 3]
 }
 
-# Arrange values in ascending order
-for key, values in parameters.items():
-    if isinstance(values[0], str):
-        parameters[key] = sorted(values)
-
 # Display message
 st.write("Please select values for the following parameters:")
 
@@ -47,24 +38,54 @@ for key, values in parameters.items():
     values.insert(0, "Select")
     selected_parameters[key] = st.selectbox(f"Select {key}", values, index=0 if key != 'num_cores' else None)
 
-# Numeric input for price
-price = st.number_input("Enter the price", min_value=0)
+# Numeric input for price (compulsory)
+price = st.number_input("Enter the price", min_value=0.0, value=0.0, step=1.0, format="%.2f", key="price")
 
 # Submit button
+# Define the mapping dictionary
+mapping_dict = {
+    'brand': {'acer': 0, 'apple': 1, 'asus': 2, 'avita': 3, 'axl': 4, 'chuwi': 5, 'dell': 6, 'fujitsu': 7, 'gigabyte': 8, 'honor': 9, 'hp': 10, 'iball': 11, 'infinix': 12, 'jio': 13, 'lenovo': 14, 'lg': 15, 'microsoft': 16, 'msi': 17, 'primebook': 18, 'realme': 19, 'samsung': 20, 'tecno': 21, 'ultimus': 22, 'walker': 23, 'wings': 24, 'zebronics': 25},
+    'processor_brand': {'apple': 0, 'amd': 1, 'intel': 2, 'other': 3},
+    'processor_tier': {'other': 0, 'celeron': 1, 'core i3': 2, 'core i5': 3, 'core i7': 4, 'core i9': 5, 'core ultra 7': 6, 'm1': 7, 'm2': 8, 'm3': 9, 'other': 10, 'pentium': 11, 'ryzen 3': 12, 'ryzen 7': 13, 'ryzen 9': 14},
+    'primary_storage_type': {'HDD': 0, 'SSD': 1},
+    'gpu_brand': {'amd': 0, 'arm': 1, 'intel': 2, 'nvidia': 3},
+    'gpu_type': {'dedicated': 0, 'integrated': 1, 'other': 2},
+    'OS': {'android': 0, 'chrome': 1, 'dos': 2, 'mac': 3, 'other': 4, 'ubuntu': 5, 'windows': 6}
+}
+
 if st.button("Submit"):
-    # Remove 'Select' from selected_parameters
-    for key, value in selected_parameters.items():
-        if value == "Select":
-            selected_parameters[key] = None
-    
-    # Add price to selected_parameters
-    selected_parameters["price"] = price
-    
-    # Create a DataFrame from selected parameters
-    input_data = pd.DataFrame(selected_parameters, index=[0])
-    
-    # Send data to main.py for prediction
-    prediction = model.predict(input_data)
-    
-    # Display prediction
-    st.write("Predicted Rating:", prediction[0])
+    # Check if any parameter is not selected
+    if any(value == "Select" or value is None for value in selected_parameters.values()) or price == 0.0:
+        st.warning("Please fill in all the compulsory fields.")
+    else:
+        # Convert selected parameters to list format
+        parameter_list = [[
+            mapping_dict['brand'][selected_parameters['brand']],
+            price,
+            mapping_dict['processor_brand'][selected_parameters['processor_brand']],
+            mapping_dict['processor_tier'][selected_parameters['processor_tier']],
+            selected_parameters['num_cores'],
+            selected_parameters['num_threads'],
+            selected_parameters['ram_memory'],
+            mapping_dict['primary_storage_type'][selected_parameters['primary_storage_type']],
+            selected_parameters['primary_storage_capacity'],
+            selected_parameters['secondary_storage_capacity'],
+            mapping_dict['gpu_brand'][selected_parameters['gpu_brand']],
+            mapping_dict['gpu_type'][selected_parameters['gpu_type']],
+            selected_parameters['is_touch_screen'],
+            selected_parameters['display_size'],
+            selected_parameters['resolution_width'],
+            selected_parameters['resolution_height'],
+            mapping_dict['OS'][selected_parameters['OS']],
+            selected_parameters['year_of_warranty']
+        ]]
+        # Import main.py
+
+        # Use the predict function from main.py
+        prediction = main.make_prediction(parameter_list)
+
+        # Display the prediction
+        st.write("The predicted laptop rating is:", prediction)
+        # Print the list
+        st.write("Data in list format:", parameter_list)
+        
